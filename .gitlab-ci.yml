@@ -1,0 +1,27 @@
+stages:
+  - validate
+
+default:
+  image: python:3.14-slim
+  tags:
+    - type/docker
+    - os/linux
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq --no-install-recommends git openssh-client
+    - python -m pip install --disable-pip-version-check '.[dev]'
+
+ruff:
+  stage: validate
+  script:
+    - ruff check src tests
+
+pytest:
+  stage: validate
+  script:
+    - pytest -q
+
+compile:
+  stage: validate
+  script:
+    - python -m compileall -q src

@@ -1,0 +1,52 @@
+name: nvis-ova
+
+services:
+  hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nvis-ova-hub:local
+    container_name: nvis-ova-hub
+    restart: unless-stopped
+    init: true
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
+    ports:
+      - "0.0.0.0:8787:8787"
+    environment:
+      NVIS_CONFIG: /config/config.toml
+      NVIS_WEB_ROOT: /app/web
+      NVIS_AUTH_RECORDS: ${NVIS_RUNTIME:?set NVIS_RUNTIME}/secrets/portal-auth.json
+      NVIS_SESSION_SECRET: ${NVIS_RUNTIME:?set NVIS_RUNTIME}/secrets/session-secret
+      NVIS_CREDENTIAL_ROOT: ${NVIS_RUNTIME:?set NVIS_RUNTIME}/secrets
+      NVIS_INSECURE_HTTP: "${NVIS_INSECURE_HTTP:-true}"
+    volumes:
+      - ${NVIS_RUNTIME:?set NVIS_RUNTIME}/config.toml:/config/config.toml:ro
+      - ${NVIS_RUNTIME:?set NVIS_RUNTIME}/data:${NVIS_RUNTIME:?set NVIS_RUNTIME}/data:rw
+      - ${NVIS_RUNTIME:?set NVIS_RUNTIME}/secrets:${NVIS_RUNTIME:?set NVIS_RUNTIME}/secrets:rw
+      - ${NVIS_SSH_KEY:?set NVIS_SSH_KEY}:${NVIS_SSH_KEY:?set NVIS_SSH_KEY}:ro
+      - ${NVIS_KNOWN_HOSTS:?set NVIS_KNOWN_HOSTS}:${NVIS_KNOWN_HOSTS:?set NVIS_KNOWN_HOSTS}:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 2g
+    stop_grace_period: 45s
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -m
+        - nvis_integration.container_health
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
